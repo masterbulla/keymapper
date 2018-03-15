@@ -36,36 +36,26 @@ namespace KeyMapper.Classes
 
         // Ready for extraction (home grown ioc of some kind? as long as they don't have dependencies)
 
-        private static readonly IOperatingSystemCapability operatingSystemCapability = new OperatingSystemCapabilityProvider();
-
         private static readonly IRegistryTimestampService registryTimestampService = new RegistryTimestampService();
 
-        private static Hashtable customKeyboardLayouts { get; }
+        private static Hashtable customKeyboardLayouts { get; } = new Hashtable();
 
-        private static string currentLocale { get; set; }
+		private static string currentLocale { get; set; }
 
         public static bool UserCannotWriteToApplicationRegistryKey { get; private set; }
 
-        public static bool UserCannotWriteMappings => MappingsManager.Filter == MappingFilter.Boot
-													  && !UserCanWriteBootMappings
-													  && !operatingSystemCapability.ImplementsUAC;
+        public static bool UserCannotWriteMappings => MappingsManager.Filter == MappingFilter.Boot && !UserCanWriteBootMappings;
 
 		public static bool UserCanWriteBootMappings { get; private set; }
 
-        public static string ApplicationRegistryKeyName { get; }
+		public const string ApplicationRegistryKeyName = @"Software\KeyMapper";
 
-        public static KeyboardLayoutType KeyboardLayout { get; private set; }
+		public static KeyboardLayoutType KeyboardLayout { get; private set; }
 
         public static CultureInfo CurrentCultureInfo { get; private set; }
 
         public static string KeyMapperFilePath => Path.Combine(Environment.GetFolderPath
 			(Environment.SpecialFolder.LocalApplicationData), "KeyMapper");
-
-		static AppController()
-        {
-            customKeyboardLayouts = new Hashtable();
-            ApplicationRegistryKeyName = @"Software\KeyMapper";
-        }
 
         public static void CreateAppDirectory()
         {
@@ -315,8 +305,7 @@ namespace KeyMapper.Classes
 
             KeyboardHelper.UnloadLayout();
 
-            if (operatingSystemCapability.ImplementsUAC
-                && UserCanWriteBootMappings == false
+            if (UserCanWriteBootMappings == false
                 && MappingsManager.VistaMappingsNeedSaving()) {
 				MappingsManager.SaveBootMappingsVista();
 			}
@@ -460,9 +449,7 @@ namespace KeyMapper.Classes
             // Is the current user able to write to the Keyboard Layout key in HKLM??
             // (This key always exists, Windows recreates it if it's deleted)
 
-            UserCanWriteBootMappings = registryTimestampService.CanUserWriteToKey
-                (RegistryHive.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Keyboard Layout");
-
+			UserCanWriteBootMappings = true;
 
             // When was the system booted? (Milliseconds vs Ticks is correct..)
             var boottime = DateTime.Now - TimeSpan.FromMilliseconds(Environment.TickCount);
@@ -505,22 +492,14 @@ namespace KeyMapper.Classes
             var HKLMWrite = registryTimestampService.GetRegistryKeyTimestamp
                 (RegistryHive.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Keyboard Layout");
 
-            // When was HKEY_CURRENT_USER\Keyboard Layout written?
-            var HKCUWrite = registryTimestampService.GetRegistryKeyTimestamp
-                (RegistryHive.CurrentUser, @"Keyboard Layout");
-
             // Console.WriteLine("Booted: {0}, Logged On: {1}, HKLM {2}, HKCU {3}", 
             // boottime, logontime, HKLMWrite, HKCUWrite);
 
             // Get the current scancode maps
             MappingsManager.GetMappingsFromRegistry();
 
-            // If user mappings are inappropriate (win2k, win 7) default to boot.
-            if (operatingSystemCapability.SupportsUserMappings == false)
-            {
-                MappingsManager.SetFilter(MappingFilter.Boot);
-            }
-
+            MappingsManager.SetFilter(MappingFilter.Boot);
+           
             // If HLKM or HKCU Mappings have not been changed since boot/login 
             // (ie their timestamp is earlier than the boot/login time)
             // then save them to our own reg key. This means we can determine whether a 
@@ -531,20 +510,12 @@ namespace KeyMapper.Classes
                 MappingsManager.SaveBootMappingsToKeyMapperKey();
             }
 
-            if (HKCUWrite < logontime || savedMappingsExist == false)
-            {
-                MappingsManager.SaveUserMappingsToKeyMapperKey();
-            }
-
             if (savedMappingsExist == false)
             {
                 MappingsManager.StoreUnsavedMappings();
             }
 
-            if (operatingSystemCapability.ImplementsUAC)
-            {
-                MappingsManager.SaveMappings(Mappings.CurrentBootMappings, MapLocation.KeyMapperVistaMappingsCache);
-            }
+           MappingsManager.SaveMappings(Mappings.CurrentBootMappings, MapLocation.KeyMapperVistaMappingsCache);
         }
 
         public static void SetLocale(string locale = null)

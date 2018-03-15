@@ -5,27 +5,17 @@ namespace KeyMapper.Classes
 {
     public class UndoRedoMappingStack
     {
-        public UndoRedoMappingStack()
+        public Stack<Collection<KeyMapping>> BootStack { get; } = new Stack<Collection<KeyMapping>>();
+
+		public void Push(Collection<KeyMapping> bootmaps)
         {
-            BootStack = new Stack<Collection<KeyMapping>>();
-            UserStack = new Stack<Collection<KeyMapping>>();
-        }
-
-        public Stack<Collection<KeyMapping>> UserStack { get; }
-
-        public Stack<Collection<KeyMapping>> BootStack { get; }
-
-        public void Push(Collection<KeyMapping> usermaps, Collection<KeyMapping> bootmaps)
-        {
-            UserStack.Push(usermaps);
             BootStack.Push(bootmaps);
         }
 
-        public int Count => UserStack.Count;
+        public int Count => BootStack.Count;
 
 		public void Clear()
         {
-            UserStack.Clear();
             BootStack.Clear();
         }
     }

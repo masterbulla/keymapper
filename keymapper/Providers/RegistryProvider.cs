@@ -17,17 +17,9 @@ namespace KeyMapper.Providers
                     keyname = @"SYSTEM\CurrentControlSet\Control\Keyboard Layout";
                     valuename = "Scancode Map";
                     break;
-                case MapLocation.CurrentUserKeyboardLayout:
-                    keyname = @"Keyboard Layout";
-                    valuename = "Scancode Map";
-                    break;
-                case MapLocation.KeyMapperLocalMachineKeyboardLayout:
+               case MapLocation.KeyMapperLocalMachineKeyboardLayout:
                     keyname = AppController.ApplicationRegistryKeyName;
                     valuename = "BootMaps";
-                    break;
-                case MapLocation.KeyMapperCurrentUserKeyboardLayout:
-                    keyname = AppController.ApplicationRegistryKeyName;
-                    valuename = "UserMaps";
                     break;
                 case MapLocation.KeyMapperVistaMappingsCache:
                     keyname = AppController.ApplicationRegistryKeyName;

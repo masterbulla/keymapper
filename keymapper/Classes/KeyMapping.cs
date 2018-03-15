@@ -8,8 +8,6 @@ namespace KeyMapper.Classes
 
 		public Key To { get; }
 
-		public MappingType MapType { get; private set; }
-
 		public KeyMapping()
         {
             From = new Key();
@@ -18,24 +16,18 @@ namespace KeyMapper.Classes
 
 		public KeyMapping(Key keyFrom, Key keyTo)
 		{
-            if (ReferenceEquals(keyFrom, null) || ReferenceEquals(keyTo, null))
-            {
+			// == is overridden
+			if (ReferenceEquals(keyFrom, null) || ReferenceEquals(keyTo, null)) {
                 throw new NullReferenceException("Key can't be null");
             }
 
 		    From = keyFrom;
 			To = keyTo;
-			MapType = MappingType.Null;
 		}
 
 		public override string ToString()
 		{
 			return MappingDescription;
-		}
-
-		public void SetType(MappingType newType)
-		{
-            MapType = newType;
 		}
 
         public string MappingDescription
@@ -44,20 +36,17 @@ namespace KeyMapper.Classes
             {
                 // A mapping can be:
 				bool disabled; // Is the mapping disabled or to a key?
-                bool usermapping = MapType == MappingType.User; // User or Boot mapping? 
                 string description = string.Empty;
 
-                if (MappingsManager.IsMapped(this, MappingFilter.All) == false)
+                if (MappingsManager.IsMapped(this, MappingFilter.Boot) == false)
                 {
                     // This 'mapping' is not currently mapped, so it must have been mapped previously and cleared.
-                    var km = MappingsManager.GetClearedMapping(From.Scancode, From.Extended,
-                                                                      MappingFilter.All);
+                    var km = MappingsManager.GetClearedMapping(From.Scancode, From.Extended, MappingFilter.Boot);
                     if (MappingsManager.IsEmptyMapping(km) == false)
                     {
                         disabled = MappingsManager.IsDisabledMapping(km);
 
                         description = From.Name + (disabled ? " will be enabled" : " will be unmapped");
-                        description += usermapping ? " when you next log on" : " after a restart";
                     }
                 }
                 else
@@ -65,7 +54,7 @@ namespace KeyMapper.Classes
                     // So, mapped to something.
                     // Need to also know if it's Current or Pending
 
-					bool pending = MappingsManager.IsMappingPending(this, usermapping ? MappingFilter.User : MappingFilter.Boot);
+					bool pending = MappingsManager.IsMappingPending(this, MappingFilter.Boot);
 
 					disabled = MappingsManager.IsDisabledMapping(this);
 
@@ -74,7 +63,7 @@ namespace KeyMapper.Classes
 
                     if (pending)
                     {
-                        description += usermapping ? " when you next log on" : " after a restart";
+                        description += " after a restart";
                     }
                 }
 
@@ -123,15 +112,9 @@ namespace KeyMapper.Classes
 
 		public override int GetHashCode()
 		{
-			return base.GetHashCode();
+			return HashCode.Start.Hash(From).Hash(To);
 		}
 	}
-
-	public enum MappingType
-	{
-		Null, User, Boot
-	}
-
 }
 
 

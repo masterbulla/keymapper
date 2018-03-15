@@ -45,7 +45,7 @@ namespace KeyMapper.Classes
 			return this == (Key)obj;
         }
 
-		public override int GetHashCode() => base.GetHashCode();
+		public override int GetHashCode() => HashCode.Start.Hash(Scancode).Hash(Extended);
 
 		// The C# compiler and rule OperatorsShouldHaveSymmetricalOverloads require this.
 		public static bool operator !=(Key key1, Key key2)

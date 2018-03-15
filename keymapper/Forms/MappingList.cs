@@ -95,9 +95,7 @@ namespace KeyMapper.Forms
 
 		private void AddRowsToGrid()
 		{
-			AddRowsToGrid(MappingFilter.User);
 			AddRowsToGrid(MappingFilter.Boot);
-			AddRowsToGrid(MappingFilter.ClearedUser);
 			AddRowsToGrid(MappingFilter.ClearedBoot);
 
 			if (grdMappings.RowCount == 0)
@@ -115,7 +113,7 @@ namespace KeyMapper.Forms
 
 			foreach (var map in maps)
 			{
-				if (filter == MappingFilter.ClearedUser || filter == MappingFilter.ClearedBoot)
+				if (filter == MappingFilter.ClearedBoot)
 				{
 					if (keylist.Contains(map.From))
 					{
@@ -140,11 +138,6 @@ namespace KeyMapper.Forms
 						cellvalue = "Boot";
 						break;
 
-					case MappingFilter.User:
-						cellvalue = "User";
-						break;
-
-					case MappingFilter.ClearedUser:
 					case MappingFilter.ClearedBoot:
 						cellvalue = "Cleared";
 
@@ -188,10 +181,7 @@ namespace KeyMapper.Forms
 				if (currentRow.Tag != null)
 				{
 					MappingFilter filter;
-					if (currentRow.Cells[1].Value.ToString() == "User") {
-						filter = MappingFilter.User;
-					}
-					else if (currentRow.Cells[1].Value.ToString() == "Boot") {
+					if (currentRow.Cells[1].Value.ToString() == "Boot") {
 						filter = MappingFilter.Boot;
 					}
 					else {

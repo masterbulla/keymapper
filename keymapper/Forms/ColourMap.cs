@@ -297,7 +297,7 @@ namespace KeyMapper.Forms
 			foreach (var map in currentMaps)
 			{
 
-				if (MappingsManager.IsMappingPending(map, MappingFilter.All))
+				if (MappingsManager.IsMappingPending(map, MappingFilter.Boot))
 				{
 					// Pending
 					if (MappingsManager.IsDisabledMapping(map))

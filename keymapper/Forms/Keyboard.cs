@@ -107,7 +107,6 @@ namespace KeyMapper.Forms
             bool firstrun = true;
             var savedPosition = Point.Empty;
             int savedWidth = 0;
-            var oldFilter = MappingFilter.All;
 
             firstrun = userSettings.UserHasSavedSettings == false;
             savedPosition = userSettings.KeyboardFormLocation;
@@ -115,7 +114,6 @@ namespace KeyMapper.Forms
 
             hasNumberPad = userSettings.KeyboardFormHasNumberPad;
             isMacKeyboard = userSettings.KeyboardFormHasMacKeyboard;
-            oldFilter = (MappingFilter)userSettings.LastMappingsFilter;
 
             //if (firstrun == false)
             //{
@@ -138,17 +136,7 @@ namespace KeyMapper.Forms
                 Width = savedWidth;
             }
 
-
-            // If there are boot mappings and no user mappings and the last view mode was boot, then
-            // start in boot mode - as long as user has the rights to change them (or is running Vista)
-
-            if (oldFilter == MappingFilter.Boot
-                && MappingsManager.GetMappingCount(MappingFilter.Boot) > 0
-                && MappingsManager.GetMappingCount(MappingFilter.User) == 0
-                && (AppController.UserCanWriteBootMappings || operatingSystemCapability.ImplementsUAC))
-            {
-                MappingsManager.SetFilter(MappingFilter.Boot);
-            }
+			MappingsManager.SetFilter(MappingFilter.Boot);
         }
 
 		private void CalculateDimensions()
@@ -420,45 +408,21 @@ namespace KeyMapper.Forms
 
 		private void SetMappingStatusLabelText()
         {
-
-            int allmaps = MappingsManager.GetMappingCount(MappingFilter.All);
             int bootmaps = MappingsManager.GetMappingCount(MappingFilter.Boot);
-            int usermaps = MappingsManager.GetMappingCount(MappingFilter.User);
 
             // TODO: Localizing issue. How to do plurals in other cultures???
 
             string mapstatustext;
 
-            if (allmaps > 0)
+            if (bootmaps != 0)
             {
-                string bootmaptext = string.Empty;
-                if (bootmaps != 0)
-                {
-                    bootmaptext =
-                        operatingSystemCapability.SupportsUserMappings
-                        ? $"{bootmaps} boot mapping{(bootmaps != 1 ? "s" : "")}"
-							: $"{bootmaps} mapping{(bootmaps != 1 ? "s" : "")}";
-                }
-
-                if (usermaps != 0)
-                {
-                    string usermaptext = usermaps.ToString(CultureInfo.InvariantCulture.NumberFormat) + " user mapping" +
-                                         (usermaps != 1 ? "s" : "");
-
-                    mapstatustext =
-                        bootmaptext +
-                        (string.IsNullOrEmpty(bootmaptext) ? "" : ", ") +
-                        usermaptext;
-                }
-                else
-                {
-                    mapstatustext = bootmaptext;
-                }
+			   mapstatustext = $"{bootmaps} mapping{(bootmaps != 1 ? "s" : "")}";
             }
             else
             {
                 // Need to have *something* on the status bar otherwise it doesn't work
                 // properly in W2K (it doesn't show on startup)
+				// TODO - is this still true?
                 mapstatustext = "No mappings";
             }
 
@@ -470,11 +434,6 @@ namespace KeyMapper.Forms
             if (MappingsManager.IsRestartRequired())
             {
                 StatusLabelRestartLogoff.Text = "Restart to complete the mappings";
-                StatusLabelRestartLogoff.Visible = true;
-            }
-            else if (MappingsManager.IsLogOnRequired())
-            {
-                StatusLabelRestartLogoff.Text = "Log on again to complete the mappings";
                 StatusLabelRestartLogoff.Visible = true;
             }
             else
@@ -496,18 +455,9 @@ namespace KeyMapper.Forms
             {
                 switch (MappingsManager.Filter)
                 {
-                    case MappingFilter.All:
-                        StatusLabelMappingDisplayType.Visible = false;
-                        break;
-
                     case MappingFilter.Boot:
-                        StatusLabelMappingDisplayType.Text =
-                            (AppController.UserCanWriteBootMappings || operatingSystemCapability.ImplementsUAC ? "Editing" : "Showing") + " Boot Mappings";
-                        StatusLabelMappingDisplayType.Visible = true;
-                        break;
-
-                    case MappingFilter.User:
-                        StatusLabelMappingDisplayType.Text = "Editing User Mappings";
+						// TODO - remove label
+						StatusLabelMappingDisplayType.Text = "Remove this label";
                         StatusLabelMappingDisplayType.Visible = true;
                         break;
 
@@ -659,49 +609,11 @@ namespace KeyMapper.Forms
 
 		private void SetMappingsMenuButtonStates()
         {
-            // Mappings - view all, user, boot.
-            if (operatingSystemCapability.SupportsUserMappings)
-            {
-                switch (MappingsManager.Filter)
-                {
-                    case MappingFilter.All:
-                        clearAllToolStripMenuItem.Text = "C&lear All Mappings";
-                        break;
-
-                    case MappingFilter.Boot:
-                        clearAllToolStripMenuItem.Text = "C&lear All Boot Mappings";
-                        break;
-
-                    case MappingFilter.User:
-                        clearAllToolStripMenuItem.Text = "C&lear All User Mappings";
-                        break;
-                }
-            }
-            else
-            {
-                clearAllToolStripMenuItem.Text = "C&lear All Mappings";
-            }
+             clearAllToolStripMenuItem.Text = "C&lear All Mappings";
             // Disable "Clear Mappings" and "Revert To Saved Mappings" if user can't write mappings at all
             // and the latter if there haven't been any changes
 
-            clearAllToolStripMenuItem.Enabled = !AppController.UserCannotWriteMappings;
-
-            revertToSavedToolStripMenuItem.Enabled = AppController.UserCannotWriteMappings == false &&
-													 (MappingsManager.IsRestartRequired() || MappingsManager.IsLogOnRequired());
-
-            onlyShowBootMappingsToolStripMenuItem.Text = "Boot Mappings" +
-              (AppController.UserCanWriteBootMappings || operatingSystemCapability.ImplementsUAC ? string.Empty : " (Read Only)");
-
-            // Mappings - check current view
-            showAllMappingsToolStripMenuItem.Checked = MappingsManager.Filter == MappingFilter.All;
-            onlyShowBootMappingsToolStripMenuItem.Checked = MappingsManager.Filter == MappingFilter.Boot;
-            onlyShowUserMappingsToolStripMenuItem.Checked = MappingsManager.Filter == MappingFilter.User;
-
-            // Whether to allow the option of viewing user mappings (ie not on W2K) 
-
-            chooseMappingsToolStripMenuItem.Visible = operatingSystemCapability.SupportsUserMappings;
-         
-            selectFromCaptureToolStripMenuItem.Enabled = !AppController.UserCannotWriteMappings;
+			onlyShowBootMappingsToolStripMenuItem.Text = "Remove this item";
         }
 
 		private void SetWindowMenuButtonStates()
@@ -913,21 +825,21 @@ namespace KeyMapper.Forms
 
         private void onlyShowBootMappingsMenuItemClick(object sender, EventArgs e)
         {
-            MappingsManager.SetFilter(MappingFilter.Boot);
-            Redraw();
-        }
+			// TODO remove
+			throw new InvalidOperationException("Remove this");
+		}
 
         private void onlyShowUserMappingsMenuItemClick(object sender, EventArgs e)
-        {
-            MappingsManager.SetFilter(MappingFilter.User);
-            Redraw();
-        }
+		{
+			// TODO remove
+			throw new InvalidOperationException("Remove this");
+		}
 
         private void showAllMappingsMenuItemClick(object sender, EventArgs e)
         {
-            MappingsManager.SetFilter(MappingFilter.All);
-            Redraw();
-        }
+			// TODO remove
+			throw new InvalidOperationException("Remove this");
+		}
 
         private void viewListMenuItemClick(object sender, EventArgs e)
         {
@@ -957,7 +869,7 @@ namespace KeyMapper.Forms
 
         private void exportAsRegistryFileMenuItemClick(object sender, EventArgs e)
         {
-            MappingsManager.ExportMappingsAsRegistryFile(MappingFilter.All, false);
+            MappingsManager.ExportMappingsAsRegistryFile(MappingFilter.Boot, false);
         }
 
         private void selectFromListsMenuItemClick(object sender, EventArgs e)
@@ -1099,8 +1011,9 @@ namespace KeyMapper.Forms
 
 	    private void forceUserMappingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            MappingsManager.SaveUserMappingsToKeyMapperKey(true);
-        }
+			// TODO remove
+			throw new InvalidOperationException("Remove this");
+		}
 
         private void keyboardSlideshowToolStripMenuItemClick(object sender, EventArgs e)
         {

@@ -16,11 +16,9 @@ namespace KeyMapper.Classes
     {
         // Saved mapping data
         private static Collection<KeyMapping> savedBootMappings = new Collection<KeyMapping>();
-        private static Collection<KeyMapping> savedUserMappings = new Collection<KeyMapping>();
 
         // Mapping data
-        private static Collection<KeyMapping> bootMappings = new Collection<KeyMapping>();
-        private static Collection<KeyMapping> userMappings = new Collection<KeyMapping>();
+        private static Collection<KeyMapping> mappings = new Collection<KeyMapping>();
         private static readonly Collection<KeyMapping> AllMappings = new Collection<KeyMapping>();
 
         // Current mappings based on current filter
@@ -28,7 +26,6 @@ namespace KeyMapper.Classes
 
         // Need to maintain two collections of mappings which have been cleared
         // (ie which existed at boot or logon but don't exist now)
-        private static readonly Collection<KeyMapping> clearedUserMappings = new Collection<KeyMapping>();
         private static readonly Collection<KeyMapping> clearedBootMappings = new Collection<KeyMapping>();
 
         // If user has existing mappings on first run, store them so 
@@ -43,7 +40,7 @@ namespace KeyMapper.Classes
 
         static MappingsManager()
         {
-            Filter = MappingFilter.All;
+            Filter = MappingFilter.Boot;
         }
 
         public static int UndoStackCount => undostack.Count;
@@ -53,103 +50,32 @@ namespace KeyMapper.Classes
 		public static MappingFilter Filter { get; private set; }
 
 
-        public static IEnumerable<KeyMapping> ClearedMappings
-        {
-            get
-            {
-                switch (Filter)
-                {
-                    case MappingFilter.All:
-                        var temp = CopyMappings(clearedBootMappings);
-                        foreach (var km in clearedUserMappings)
-                        {
-                            temp.Add(km);
-                        }
-                        return temp;
-
-                    case MappingFilter.Boot:
-                        return clearedBootMappings;
-
-                    case MappingFilter.User:
-                        return clearedUserMappings;
-
-                    default:
-                        return new Collection<KeyMapping>();
-                }
-            }
-        }
+		public static IEnumerable<KeyMapping> ClearedMappings => clearedBootMappings;
 
 	    public static void StoreUnsavedMappings()
         {
-            unsavedMappings = CopyMappings(bootMappings);
-            foreach (var km in userMappings) {
-				unsavedMappings.Add(km);
-			}
+            unsavedMappings = CopyMappings(mappings);
 		}
 
 		private static void PopulateMappingLists()
         {
             // Populate the internal mapping lists at startup and when mappings change.
             currentFilteredMappings.Clear();
-            clearedUserMappings.Clear();
             clearedBootMappings.Clear();
             AllMappings.Clear();
 
 
-            foreach (var bootmap in bootMappings)
+            foreach (var bootmap in mappings)
             {
                 // Add everything to All Mappings
                 AllMappings.Add(bootmap);
-
-                bool addToFilteredMappings = true;
-
-                switch (Filter)
-                {
-                    case MappingFilter.All:
-                        // If filter is All then need to check if this boot mapping is overriden by a user mapping 
-                        // Because if it is, we don't add it.
-
-                        foreach (var usermap in userMappings)
-                        {
-                            if (bootmap.From == usermap.From)
-                            {
-                                addToFilteredMappings = false;
-                                break;
-                            }
-                        }
-
-                        break;
-
-                    case MappingFilter.User:
-                        addToFilteredMappings = false;
-                        break;
-                }
-
-                if (addToFilteredMappings) {
-					currentFilteredMappings.Add(bootmap);
-				}
-			}
-
-            foreach (var usermap in userMappings)
-            {
-                AllMappings.Add(usermap);
-
-                if (Filter == MappingFilter.All || Filter == MappingFilter.User) {
-					currentFilteredMappings.Add(usermap);
-				}
+				currentFilteredMappings.Add(bootmap);
 			}
 
             // Finally, skip through the user and boot mappings so we can populate the cleared mappings lists
-            foreach (var map in savedUserMappings)
+           foreach (var map in savedBootMappings)
             {
-                if (userMappings.Contains(map) == false) {
-					clearedUserMappings.Add(map);
-				}
-			}
-
-            foreach (var map in savedBootMappings)
-            {
-                if (bootMappings.Contains(map) == false) {
+                if (mappings.Contains(map) == false) {
 					clearedBootMappings.Add(map);
 				}
 			}
@@ -173,20 +99,11 @@ namespace KeyMapper.Classes
         {
             switch (filter)
             {
-                case MappingFilter.All:
-                    return AllMappings;
-
                 case MappingFilter.Current:
                     return currentFilteredMappings;
 
                 case MappingFilter.Boot:
-                    return bootMappings;
-
-                case MappingFilter.User:
-                    return userMappings;
-
-                case MappingFilter.ClearedUser:
-                    return clearedUserMappings;
+                    return mappings;
 
                 case MappingFilter.ClearedBoot:
                     return clearedBootMappings;
@@ -199,20 +116,11 @@ namespace KeyMapper.Classes
         {
             switch (filter)
             {
-                case MappingFilter.All:
-                    return AllMappings.Count;
-
                 case MappingFilter.Current:
                     return currentFilteredMappings.Count;
 
                 case MappingFilter.Boot:
-                    return bootMappings.Count;
-
-                case MappingFilter.User:
-                    return userMappings.Count;
-
-                case MappingFilter.ClearedUser:
-                    return clearedUserMappings.Count;
+                    return mappings.Count;
 
                 case MappingFilter.ClearedBoot:
                     return clearedBootMappings.Count;
@@ -230,26 +138,9 @@ namespace KeyMapper.Classes
 
 			// Need to iterate through to see if any have changed.
 
-            foreach (var km in bootMappings)
+            foreach (var km in mappings)
             {
                 if (savedBootMappings.Contains(km) == false && unsavedMappings.Contains(km) == false) {
-					return true;
-				}
-			}
-
-            return false;
-        }
-
-        public static bool IsLogOnRequired()
-        {
-            if (clearedUserMappings.Count != 0) {
-				return true;
-			}
-
-			// Need to look for new mappings as well.
-            foreach (var km in userMappings)
-            {
-                if (savedUserMappings.Contains(km) == false && unsavedMappings.Contains(km) == false) {
 					return true;
 				}
 			}
@@ -268,15 +159,15 @@ namespace KeyMapper.Classes
 				return false;
 			}
 
-			var maps = GetMappingsFromScancodeMap(map, MappingType.Boot);
+			var maps = GetMappingsFromScancodeMap(map);
 
-            if (maps.Count != bootMappings.Count) {
+            if (maps.Count != mappings.Count) {
 				return true;
 			}
 
 			foreach (var km in maps)
             {
-                if (bootMappings.Contains(km) == false) {
+                if (mappings.Contains(km) == false) {
 					return true;
 				}
 			}
@@ -290,20 +181,11 @@ namespace KeyMapper.Classes
 
             switch (filter)
             {
-                case MappingFilter.All:
-                    maps = AllMappings;
-                    break;
                 case MappingFilter.Boot:
-                    maps = bootMappings;
+                    maps = mappings;
                     break;
                 case MappingFilter.Current:
                     maps = currentFilteredMappings;
-                    break;
-                case MappingFilter.User:
-                    maps = userMappings;
-                    break;
-                case MappingFilter.ClearedUser:
-                    maps = clearedUserMappings;
                     break;
                 case MappingFilter.ClearedBoot:
                     maps = clearedBootMappings;
@@ -330,15 +212,10 @@ namespace KeyMapper.Classes
 			// Did this mapping exist at boot or logon time?
             switch (filter)
             {
-                case MappingFilter.ClearedUser:
-                case MappingFilter.ClearedBoot:
+				case MappingFilter.ClearedBoot:
                     return true; // A cleared mapping is by definition pending
-                case MappingFilter.All:
-                    return !(savedBootMappings.Contains(map) | savedUserMappings.Contains(map));
                 case MappingFilter.Boot:
                     return !savedBootMappings.Contains(map);
-                case MappingFilter.User:
-                    return !savedUserMappings.Contains(map);
             }
 
             return true;
@@ -363,28 +240,13 @@ namespace KeyMapper.Classes
 
         public static KeyMapping GetClearedMapping(int scancode, int extended, MappingFilter filter)
         {
-            // If all mappings, look at boot mappings first 
-            // in case the key was mapped in both. 
-
-            if (filter == MappingFilter.All || filter == MappingFilter.Boot)
+			foreach (var mapping in clearedBootMappings)
             {
-                foreach (var mapping in clearedBootMappings)
-                {
-                    if (mapping.From.Scancode == scancode && mapping.From.Extended == extended) {
-						return mapping;
-					}
-				}
-            }
-
-            if (filter == MappingFilter.All || filter == MappingFilter.User) {
-				foreach (var mapping in clearedUserMappings)
-				{
-					if (mapping.From.Scancode == scancode && mapping.From.Extended == extended) {
-						return mapping;
-					}
+                if (mapping.From.Scancode == scancode && mapping.From.Extended == extended) {
+					return mapping;
 				}
 			}
-
+           
 			return GetEmptyMapping(new Key(scancode, extended));
         }
 
@@ -396,10 +258,7 @@ namespace KeyMapper.Classes
             // but would need to know what previous filters were each time.)
             // or b) .. just clear the stacks.
 
-            if (filter != MappingFilter.All && filter != MappingFilter.Boot && filter != MappingFilter.User) {
-				throw new ArgumentException("Mappings Filter is not valid");
-			}
-
+           
 			undostack.Clear();
             redostack.Clear();
 
@@ -448,26 +307,6 @@ namespace KeyMapper.Classes
             PopulateMappingLists();
         }
 
-
-		public static void SaveUserMappingsToKeyMapperKey(bool raiseEvent = false)
-        {
-            SaveMappings(Mappings.CurrentUserMappings,
-                         MapLocation.KeyMapperCurrentUserKeyboardLayout);
-            GetMappingsFromRegistry(MapLocation.KeyMapperCurrentUserKeyboardLayout);
-            PopulateMappingLists();
-            if (raiseEvent) {
-				RaiseMappingsChangedEvent();
-			}
-		}
-
-        private static void SaveMappings()
-        {
-            SaveMappings(Mappings.CurrentUserMappings, MapLocation.CurrentUserKeyboardLayout);
-            if (AppController.UserCanWriteBootMappings) {
-				SaveMappings(Mappings.CurrentBootMappings, MapLocation.LocalMachineKeyboardLayout);
-			}
-		}
-
         public static void SaveMappings(Mappings whichMappings, MapLocation whereToSave)
         {
             Collection<KeyMapping> maps;
@@ -475,16 +314,10 @@ namespace KeyMapper.Classes
             switch (whichMappings)
             {
                 case Mappings.CurrentBootMappings:
-                    maps = bootMappings;
+                    maps = mappings;
                     break;
-                case Mappings.CurrentUserMappings:
-                    maps = userMappings;
-                    break;
-                case Mappings.SavedBootMappings:
+               case Mappings.SavedBootMappings:
                     maps = savedBootMappings;
-                    break;
-                case Mappings.SavedUserMappings:
-                    maps = savedUserMappings;
                     break;
                 default:
                     return;
@@ -583,9 +416,6 @@ namespace KeyMapper.Classes
             // [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Keyboard Layout]
             // "Scancode Map"=hex:00,00,00,00,00,00,00,00,02,00,00,00,2a,00,3a,00,00,00,00,00
 
-            // [HKEY_CURRENT_USER\Keyboard Layout]
-            // "Scancode Map"=hex:00,00,00,00,00,00,00,00,04,00,00,00,5d,e0,1c,e0,1d,00,5b,e0,2a,00,3a,00,00,00,00,00
-
             // Where there are no mappings, delete the value:
             // "Scancode Map"=-
 
@@ -625,7 +455,7 @@ namespace KeyMapper.Classes
                 sw.WriteLine("Windows Registry Editor Version 5.00");
                 sw.WriteLine();
 
-                if (filter == MappingFilter.Boot || filter == MappingFilter.All)
+                if (filter == MappingFilter.Boot)
                 {
                     sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Keyboard Layout]");
                     sw.Write("\"Scancode Map\"=");
@@ -645,24 +475,6 @@ namespace KeyMapper.Classes
 						sw.WriteLine();
 					}
 				}
-
-                if (filter == MappingFilter.User || filter == MappingFilter.All)
-                {
-                    sw.WriteLine(@"[HKEY_CURRENT_USER\Keyboard Layout]");
-
-                    sw.Write("\"Scancode Map\"=");
-
-                    if (GetMappingCount(MappingFilter.User) > 0)
-                    {
-                        sw.Write("hex:");
-                        WriteMappingsToStream(sw, GetMappingsAsByteArray(GetMappings(MappingFilter.User)));
-                    }
-                    else {
-						sw.Write("-");
-					}
-
-					sw.WriteLine();
-                }
             }
 
             return filename;
@@ -682,7 +494,7 @@ namespace KeyMapper.Classes
 	    private static void RaiseMappingsChangedEvent()
         {
             PopulateMappingLists();
-            SaveMappings();
+            SaveMappings(Mappings.CurrentBootMappings, MapLocation.LocalMachineKeyboardLayout);
 			MappingsChanged?.Invoke(null, null);
 		}
 
@@ -747,7 +559,7 @@ namespace KeyMapper.Classes
                 bool numLockIsDisabled = false;
                 bool numLockIsMapped = false;
 
-                foreach (var km in bootMappings) {
+                foreach (var km in mappings) {
 					if (km.From.Scancode == 69)
 					{
 						if (IsDisabledMapping(km)) {
@@ -758,21 +570,6 @@ namespace KeyMapper.Classes
 						}
 					}
 				}
-
-				// Num Lock could be disabled or mapped in boot
-                // but overridden in user mappings.
-                foreach (var km in userMappings)
-                {
-                    if (km.From.Scancode == 69)
-                    {
-                        if (IsDisabledMapping(km)) {
-							numLockIsDisabled = true;
-						}
-						else {
-							numLockIsMapped = true;
-						}
-					}
-                }
 
                 if (numLockIsDisabled == false)
                 {
@@ -815,25 +612,12 @@ namespace KeyMapper.Classes
 
             if (Filter == MappingFilter.Boot)
             {
-                map.SetType(MappingType.Boot);
-
                 var existingMap = GetKeyMapping(map.From.Scancode, map.From.Extended);
-                if (existingMap.IsEmpty() == false && existingMap.MapType == MappingType.Boot) {
-					bootMappings.Remove(existingMap);
+                if (existingMap.IsEmpty() == false) {
+					mappings.Remove(existingMap);
 				}
 
-				bootMappings.Add(map);
-            }
-            else
-            {
-                map.SetType(MappingType.User);
-
-                var existingMap = GetKeyMapping(map.From.Scancode, map.From.Extended);
-                if (existingMap.IsEmpty() == false && existingMap.MapType == MappingType.User) {
-					userMappings.Remove(existingMap);
-				}
-
-				userMappings.Add(map);
+				mappings.Add(map);
             }
 
             if (disableNumLock)
@@ -859,35 +643,12 @@ namespace KeyMapper.Classes
 
             switch (filter)
             {
-                case MappingFilter.All:
-                    // Could be mapped in both HKCU and HKLM so 
-                    // remove the HKCU mapping first, but not both..
-
-                    if (userMappings.Contains(map))
-                    {
-                        userMappings.Remove(map);
-                    }
-                    else if (bootMappings.Contains(map))
-                    {
-                        bootMappings.Remove(map);
-                    }
-                    break;
-
                 case MappingFilter.Boot:
-                    if (bootMappings.Contains(map))
+                    if (mappings.Contains(map))
                     {
-                        bootMappings.Remove(map);
+                        mappings.Remove(map);
                     }
-                    break;
-
-                case MappingFilter.User:
-                    if (userMappings.Contains(map))
-                    {
-                        userMappings.Remove(map);
-                    }
-                    break;
-                default:
-                    break;
+                break;
             }
 
             RaiseMappingsChangedEvent();
@@ -901,23 +662,14 @@ namespace KeyMapper.Classes
         public static void ClearMappings()
         {
             PushMappingsOntoUndoStack();
-
-            if (Filter != MappingFilter.User) {
-				bootMappings = new Collection<KeyMapping>();
-			}
-
-			if (Filter != MappingFilter.Boot) {
-				userMappings = new Collection<KeyMapping>();
-			}
-
+			mappings = new Collection<KeyMapping>();
 			RaiseMappingsChangedEvent();
         }
 
         public static void RevertToStartupMappings()
         {
             PushMappingsOntoUndoStack();
-            bootMappings = CopyMappings(savedBootMappings);
-            userMappings = CopyMappings(savedUserMappings);
+            mappings = CopyMappings(savedBootMappings);
             RaiseMappingsChangedEvent();
         }
 
@@ -945,7 +697,7 @@ namespace KeyMapper.Classes
             RaiseMappingsChangedEvent();
         }
 
-	    private static Collection<KeyMapping> GetMappingsFromScancodeMap(byte[] map, MappingType type)
+	    private static Collection<KeyMapping> GetMappingsFromScancodeMap(byte[] map)
         {
             // Transform the byte array into keymappings
 
@@ -989,7 +741,6 @@ namespace KeyMapper.Classes
 
                     if (mapping.IsValid())
                     {
-                        mapping.SetType(type);
                         maps.Add(mapping);
                     }
                     else
@@ -1006,9 +757,7 @@ namespace KeyMapper.Classes
         public static void GetMappingsFromRegistry()
         {
             GetMappingsFromRegistry(MapLocation.LocalMachineKeyboardLayout);
-            GetMappingsFromRegistry(MapLocation.CurrentUserKeyboardLayout);
             GetMappingsFromRegistry(MapLocation.KeyMapperLocalMachineKeyboardLayout);
-            GetMappingsFromRegistry(MapLocation.KeyMapperCurrentUserKeyboardLayout);
             PopulateMappingLists();
         }
 
@@ -1016,41 +765,21 @@ namespace KeyMapper.Classes
         {
             var mappings = new Collection<KeyMapping>();
 
-            var type = MappingType.Null;
-            switch (location)
-            {
-                case MapLocation.LocalMachineKeyboardLayout:
-                case MapLocation.KeyMapperLocalMachineKeyboardLayout:
-                    type = MappingType.Boot;
-                    break;
-                case MapLocation.CurrentUserKeyboardLayout:
-                case MapLocation.KeyMapperCurrentUserKeyboardLayout:
-                    type = MappingType.User;
-                    break;
-            }
-
-
-            var map = RegistryProvider.GetScancodeMapFromRegistry(location);
+           var map = RegistryProvider.GetScancodeMapFromRegistry(location);
 
             if (map != null) {
-				mappings = GetMappingsFromScancodeMap(map, type);
+				mappings = GetMappingsFromScancodeMap(map);
 			}
 
 			switch (location)
             {
                 case MapLocation.LocalMachineKeyboardLayout:
-                    bootMappings = mappings;
-                    break;
-                case MapLocation.CurrentUserKeyboardLayout:
-                    userMappings = mappings;
+                    MappingsManager.mappings = mappings;
                     break;
                 case MapLocation.KeyMapperLocalMachineKeyboardLayout:
                     savedBootMappings = mappings;
                     break;
-                case MapLocation.KeyMapperCurrentUserKeyboardLayout:
-                    savedUserMappings = mappings;
-                    break;
-                default:
+ default:
                     break;
             }
         }
@@ -1059,24 +788,22 @@ namespace KeyMapper.Classes
 
         private static void PushMappingsOntoUndoStack()
         {
-            undostack.Push(CopyMappings(userMappings), CopyMappings(bootMappings));
+            undostack.Push(CopyMappings(mappings));
         }
 
         private static void PushMappingsOntoRedoStack()
         {
-            redostack.Push(CopyMappings(userMappings), CopyMappings(bootMappings));
+            redostack.Push(CopyMappings(mappings));
         }
 
         private static void PopMappingsOffUndoStack()
         {
-            bootMappings = undostack.BootStack.Pop();
-            userMappings = undostack.UserStack.Pop();
+            mappings = undostack.BootStack.Pop();
         }
 
         private static void PopMappingsOffRedoStack()
         {
-            bootMappings = redostack.BootStack.Pop();
-            userMappings = redostack.UserStack.Pop();
+            mappings = redostack.BootStack.Pop();
         }
     }
 }

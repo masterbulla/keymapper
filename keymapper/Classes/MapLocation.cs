@@ -3,9 +3,8 @@
     public enum MapLocation
     {
         LocalMachineKeyboardLayout,
-        CurrentUserKeyboardLayout,
         KeyMapperLocalMachineKeyboardLayout,
-        KeyMapperCurrentUserKeyboardLayout,
+		// TODO - WTF is this for?!?
         KeyMapperVistaMappingsCache
     }
 }
