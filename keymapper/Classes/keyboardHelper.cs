@@ -52,7 +52,7 @@ namespace KeyMapper.Classes
         {
             UnloadLayout();
             currentInputLocaleIdentifier = NativeMethods.LoadKeyboardLayout(
-                locale, NativeMethods.KLF_ACTIVATE | NativeMethods.KLF_SUBSTITUTE_OK);
+                new StringBuilder(locale), NativeMethods.KLF_ACTIVATE | NativeMethods.KLF_SUBSTITUTE_OK);
 
             // While we have it, get it's HKL and return the low word of it:
             // (this allows the appropriate culture to be loaded)

@@ -44,7 +44,7 @@ namespace KeyMapper.Classes.Interop
 		internal static extern int GetKeyboardLayoutList(int nBuff, [Out, MarshalAs(UnmanagedType.LPArray)] int[] lpList);
 
 		[DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "LoadKeyboardLayoutW", ExactSpelling = true)]
-		internal static extern IntPtr LoadKeyboardLayout(string pwszKLID, uint flags);
+		internal static extern IntPtr LoadKeyboardLayout(StringBuilder pwszKLID, uint flags);
 
 		[DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
